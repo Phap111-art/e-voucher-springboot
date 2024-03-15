@@ -39,41 +39,18 @@ public class PurchaseServiceImpl implements PurchaseService {
         Voucher voucher = new Voucher();
         addOrUpdateCustomerBuyProduct(customerId, productId);
 
-        if (voucherRepository.existsByCustomerCustomerId(customerId)) {
-            if (voucherRepository.findByCustomerCustomerId(customerId).isPresent()) {
-                voucher = voucherRepository.findByCustomerCustomerId(customerId).get();
-            }
-//            if (Objects.nonNull(countCustomersWithMoreThan5Purchases(customerId))) {
-//                voucher = countCustomersWithMoreThan5Purchases(customerId);
-//            }
-//            if (Objects.nonNull(applyDiscountDuringLateNight(customerId))) {
-//                voucher = applyDiscountDuringLateNight(customerId);
-//            }
-//            if (Objects.nonNull(applyDiscountOnSunday(customerId))) {
-//                voucher = applyDiscountOnSunday(customerId);
-//            }
-//            if (Objects.nonNull(applyDiscountOnSpecialOccasions(customerId))) {
-//                voucher = applyDiscountOnSpecialOccasions(customerId);
-//            }
+        // check customer sau khi mua 5 lần sản phầm
+        if (purchaseRepository.isCustomerExceededPurchaseLimit(customerId, productId)) {
+            voucher = insertOrUpdateVoucher(customerId);
         }
-
         Double money = purchaseRepository.TotalQuantityByCustomerIdAndProductId(customerId, productId);
         ls.add("tổng giá tiền hiện tại : " + money.toString());
         Double amount = money - (money * (voucher.getDiscount()) / 100);
         ls.add("sau khi áp dụng mã voucher " + voucher.getDiscount() + " : " + amount);
+        voucherRepository.deleteVouchersByCustomerAndEndDate(customerId);
         return ls;
     }
 
-
-//    private Voucher countCustomersWithMoreThan5Purchases(int customerId) {
-//        Voucher voucher = null;
-//        // giảm giá khi mua số lương 5 lần
-//        if (purchaseRepository.checkQuantityByCustomerIdAndProductId(customerId)) {
-//            // voucher is exits
-//            voucher = setVoucher(customerId, 7);
-//        }
-//        return voucher;
-//    }
 
     private Voucher applyDiscountDuringLateNight(int customerId) {
         Voucher voucher = null;
@@ -83,7 +60,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         // Thực hiện giảm giá cho khách hàng từ 12h tối tới 1h sáng
         if (currentTime.toLocalTime().isAfter(startTime) && currentTime.toLocalTime().isBefore(endTime)) {
             // voucher is exits
-            if (voucherRepository.checkCustomerVoucherStatus(customerId)) {
+            if (voucherRepository.checkCustomerAndStatus(customerId)) {
                 voucher = new Voucher();
             } else {
                 voucher = voucherRepository.insertVoucherStatusAndDates(10, customerId);
@@ -99,7 +76,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         // Thực hiện giảm giá sunday hang` tuan`
         if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
             // voucher is exits
-            if (voucherRepository.checkCustomerVoucherStatus(customerId)) {
+            if (voucherRepository.checkCustomerAndStatus(customerId)) {
                 voucher = new Voucher();
             } else {
                 voucher = voucherRepository.insertVoucherStatusAndDates(5, customerId);
@@ -115,7 +92,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (DateUtils.isChristmas(currentDate) || DateUtils.isNewYear(currentDate) || DateUtils.isGrandOpening(currentDate)) {
 
             // voucher is exits
-            if (voucherRepository.checkCustomerVoucherStatus(customerId)) {
+            if (voucherRepository.checkCustomerAndStatus(customerId)) {
                 voucher = new Voucher();
             } else {
                 voucher = voucherRepository.insertVoucherStatusAndDates(5, customerId);
@@ -133,32 +110,33 @@ public class PurchaseServiceImpl implements PurchaseService {
                     .customer(customerRepository.findById(customerId).get())
                     .product(productRepository.findById(productId).get())
                     .quantity(1).build());
-        }else{
+        } else {
+            // cập nhật số lượng khi mua hàng
             Optional<Purchase> purchase = purchaseRepository.getByCustomerAndProduct(customerId, productId);
             if (!purchase.isPresent())
                 throw new CustomException("id customer and product does not exits!", HttpStatus.NOT_FOUND);
-            purchase.get().setQuantity(purchase.get().getQuantity() );
+            purchase.get().setQuantity(purchase.get().getQuantity() + 1);
             purchaseRepository.save(purchase.get());
         }
 
     }
 
-    private Voucher setVoucher(int customerId, int discount) {
-        Voucher voucher ;
-        if (!voucherRepository.existsByCustomerCustomerId(customerId)) {
-            voucher =  Voucher.builder()
-                    .customer(customerRepository.findById(customerId).get())
-                    .discount(discount)
-                    .status(true)
-                    .startTime(new Date())
-                    .endTime(DateUtils.getEndDate())
-                    .build();
-        }else{
-            voucher = voucherRepository.findByCustomerCustomerId(customerId).get();
-            voucher.setDiscount(7);
+    private Voucher insertOrUpdateVoucher(int customerId) {
+        Optional<Voucher> isVoucher = voucherRepository.findByCustomerCustomerId(customerId);
+        if (voucherRepository.checkCustomerAndStatus(customerId) != null && voucherRepository.checkCustomerAndStatus(customerId)) {
+            if (isVoucher.isPresent()){
+                isVoucher.get().setDiscount(7);
+                return voucherRepository.save(isVoucher.get());
+            }
         }
-        return voucherRepository.save(voucher);
-
+        Voucher newVoucher = Voucher.builder()
+                .customer(customerRepository.findById(customerId).get())
+                .discount(7)
+                .status(true)
+                .startTime(new Date())
+                .endTime(DateUtils.getEndDate())
+                .build();
+        return voucherRepository.save(newVoucher);
     }
 
 }
