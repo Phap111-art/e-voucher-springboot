@@ -33,10 +33,10 @@ public class WebSecurityConfig {
     @Value("${default_success_url}")
     private String successUrls;
 
-//    @Bean
-//    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-//        return new JwtAuthenticationFilter();
-//    }
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -96,8 +96,8 @@ public class WebSecurityConfig {
                         .addLogoutHandler(jwtSessionStorageLogoutHandler())
                         .deleteCookies("JSESSIONID")
                         .permitAll()
-                );
-//                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                )
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

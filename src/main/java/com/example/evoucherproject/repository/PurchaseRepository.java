@@ -16,7 +16,7 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Integer> {
     @Query("SELECT SUM(p.quantity * p.product.price) FROM Purchase p WHERE p.customer.customerId = :customerId AND p.product.productId = :productId")
     Double TotalQuantityByCustomerIdAndProductId(@Param("customerId") int customerId, @Param("productId") int productId);
 
-    // kiểm tra kh và sp có tồn tại trong db hay không  // Purchase as p  where p.customer_id.id
+    // kiểm tra kh và sp có tồn tại trong db hay không
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Purchase p WHERE p.customer.customerId = :customerId AND p.product.productId = :productId")
     boolean existsByCustomerIdAndProductId(int customerId, int productId);
 
