@@ -16,8 +16,7 @@ import java.util.Optional;
 public interface VoucherRepository extends JpaRepository<Voucher,Integer> {
 
     //check status voucher
-    @Query("SELECT v.status FROM Voucher v WHERE v.customer.customerId = :customerId")
-    boolean checkCustomerVoucherStatus(@Param("customerId") int customerId);
+
 
     // insert voucher
     @Modifying
